@@ -1,0 +1,43 @@
+name: Deploy Python App to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code from GitHub
+      uses: actions/checkout@v4
+
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ec2-user
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # Create app directory if it doesn't exist
+          sudo mkdir -p /home/ec2-user/app
+          sudo chown -R ec2-user:ec2-user /home/ec2-user/app
+          
+          cd /home/ec2-user/app
+
+          # Download files directly from your GitHub repository main branch
+          sudo yum install git -y
+          git init || true
+          git remote add origin https://github.com/${{ github.repository }}.git || true
+          git fetch --all
+          git reset --hard origin/main
+
+          # Set up virtual environment and restart app
+          python3 -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+          
+          # Kill old instances and start fresh background gunicorn process
+          sudo pkill gunicorn || true
+          nohup gunicorn -w 3 -b 0.0.0.0:8000 app:app > gunicorn.log 2>&1 &

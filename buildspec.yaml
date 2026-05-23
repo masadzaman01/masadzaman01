@@ -1,0 +1,21 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.11
+    commands:
+      - echo Installing Python dependencies...
+      - pip install -r requirements.txt
+  build:
+    commands:
+      - echo Validating application structure...
+  post_build:
+    commands:
+      - echo Preparing artifacts for deployment...
+      - mkdir -p scripts
+      - chmod +x scripts/restart_app.sh
+
+artifacts:
+  files:
+    - '**/*'
